@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>고양이 가라사대</title>
+  </head>
+  <style>
+    body {
+      text-align: center;
+    }
+    .main-card button {
+      position: relative;
+      left: -45px;
+      bottom: 15px;
+    }
+    .favorites {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+  </style>
+  <body>
+    <div id="app"></div>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>      <!--//react 코드 추가-->
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>       <!--//reactDOM 코드 추가-->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>       <!--//babel 코드 추가 = 새로운 유형의 자바스크립트를 브라우저가 이해할 수 있도록 통역(컴파일)-->
+    <script type="text/babel">
+      const jsonLocalStorage = {
+        // 값을 저장할 때, JSON.stringify(value)로 셋팅
+        setItem: (key, value) => {
+          localStorage.setItem(key, JSON.stringify(value));
+        },
+        // 받아온 로컬스토리지 데이터를 Json으로 parse해 가져옴
+        getItem: (key) => {
+          return JSON.parse(localStorage.getItem(key));
+        },
+      };
+      console.log("야옹");
+
+      const Title = (props) => {
+        return(
+          <h2>{props.children}</h2> // .children : 아래 "<Title>1번째 고양이 가라사대<Title/>"에서 받아온 인자값을 props가 어떻게 받아오는지 console.log(props)로 확인 했을때, .children라는 형태로 값을 받아오는 것을 확인.  >>  하여, {props.children}로 작성
+        )
+      }
+
+      const Form = ({updateMainCat}) => {
+          // 한글이 포함되어 있으면 true를, 포함되지 않으면 false를 반환
+          const includesHangul = (text) => /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/i.test(text); // 폼 검증(form validation) 로직 => 영어로 입력받아야 하는데, 사용자가 한글을 입력한 후 폼 제출을 한 경우
+
+          const [value, setValue] = React.useState("");
+          const [errorMessage, setErrorMessage] = React.useState("");
+
+          function handleInputChange(e) {
+            const userValue = e.target.value;
+            setErrorMessage('');  // 그 전 값을 지우기 위한 초기화를 진행
+            if (includesHangul(userValue)){
+              setErrorMessage("한글을 입력할 수 없습니다.");
+            }
+            setValue(userValue.toUpperCase()); // e는 이벤트 객체를 나타네며 e.target은 현재 발생한 이벤트의 타겟, e.target.value는 해당 타겟의 value 속성값을 의미. // .toUpperCase() : 소문자를 대문자로 변환
+          }
+          /*빈 값으로 재출할 경우, 에러메세지를 띄움*/
+          function handleFormSubmit(e){
+            e.preventDefault(); // 자바스크립트 문법. 기본적으로 폼 제출을 하면, 브라우저가 리프레시 됨 >> 이를 방지. 제출 시, 브라우저가 리프레시 하는 것을 방지함.
+            setErrorMessage('');  // 그 전 값을 지우기 위한 초기화를 진행
+            if (value == ''){
+              setErrorMessage("빈 값은 입력할 수 없습니다.");
+              return; // 빈 값으로 제출할 경우, updateMainCat()함수가 작동하지 않도록(메인타이틀의 n번째 숫자가 바뀌지 않도록) return으로 해당 함수를 빠져나가도록 작성
+            }
+            updateMainCat();
+          }
+        return (
+          //기본적으로 폼 제출을 하면, 브라우저가 리프레시 됨
+          <form onSubmit={handleFormSubmit}>   
+            <input 
+                   type="text" 
+                   name="name" 
+                   placeholder="영어 대사를 입력해주세요"
+                   value={value}  //const [value, setvalue] = React.uses(''); 위 코드에서 정의한 동적으로 작동하는 value를 인풋의 밸류값으로 지정
+                   onChange={handleInputChange} //onChange : input값이 바뀔때마다 {handleInputChange}함수를 호출
+            />
+            <button type="submit">생성</button>
+            <p style={{color: "red"}}>{errorMessage}</p>
+          </form>
+        );
+      };
+
+      // Props >> React에서 인자를 넘겨준 것을 지칭
+      function CatItem(props) {
+        return(
+        <li>
+          <img 
+              src= {props.img} 
+              style={ {width: "150px"} } // 인라인 스타일링 방식. value값을 string 형식("")으로 설정
+          />
+        </li>
+        );
+      }
+
+      function Favorites({favorites}){
+        return(
+          // 리액트에서는 class라는 속성 대신 class-name이라는 속성을 사용한다. 표기법 : className. 예시 : (className="fav").
+          <ul className="favorites">  
+            {favorites.map((cat) => (
+              <CatItem img={cat} key={cat}/> //맵을 잘 활용하려면 키값을 지정해주는 것이 좋다. 보통 변수에 값을 지정할 때(CAT1 등) id값을 함께 지정함. 여기서는 url(cat)을 키이자 값으로 지정한 상태임
+            ))}
+          </ul>
+        )
+      };
+
+      // 화살표 함수 : 함수를 정의하는 방법 중 하나
+      const MainCard = ({img, onHeartClick}) => {
+        // console.log(props);
+        // onCilck으로 받아주는 이벤트핸들러명은 handle...Click으로 명명한다
+        // onMouseOver으로 받아주는 이벤트핸들러명은 handle...MouseOver으로 명명한다
+
+        return(
+          <div className="main-card">
+            <img
+               src={img}
+               alt="고양이"
+               width="400"
+            />
+            <button onClick={onHeartClick} >🤍</button> 
+          </div>
+        )
+      };
+
+      // mainCard와 favorites를 모두 render하여 홈페이지에 보여주고 싶은데, 랜더는 하나만 할 수 있음.
+      // 때문에, 변수를 따로 생성해 두 변수를 기술 
+      // 부모 컴포넌트
+      const App = () => {
+        const CAT1 = "https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react";
+        const CAT2 = "https://cataas.com/cat/BxqL2EjFmtxDkAm2/says/inflearn";
+        const CAT3 = "https://cataas.com/cat/18MD6byVC1yKGpXp/says/JavaScript";
+        // 최상위 태그가 1개이여야 함. 때문에 <div></div> 안에 {mainCard}와 {favorites}를 기술
+        //const [counter, setCounter] = React.useState(1); // 아래 3 코드를 자바문법을 사용하여 한 줄로 단축 가능
+        /*const counterState = React.useState(1); //초기값을 1로 설정
+        const counter = counterState[0]; // 초기값이 저장된 공간
+        const setCounter = counterState[1]; // 다음 카운터를 지정하기 위한 공간*/
+        //const [counter, setCounter] = React.useState(Number(jsonLocalStorage.getItem('counter')));  // localStorage에 값을 저장하게 되면 기본적으로 String값으로 저장함. 이를 Number 타입으로 저장될 수 있도록 변환해줌
+        const [counter, setCounter] = React.useState(jsonLocalStorage.getItem("counter") || 0);  // 위에서 미리 정의한 jsonLocalStorage() 의 로털스토리지 형식을 사용
+        const [mainCat, setmainCat] = React.useState(CAT1);
+        const [favorites, setFavorites] = React.useState(jsonLocalStorage.getItem("favorites") || []) ; // jsonLocalStorage.getItem("favorites")로 초기값을 지정. But, 값이 없으면 || 연산자 뒤에 있는 []배열(빈 배열)로 초기값 지정하라.
+
+        function updateMainCat(){
+          setmainCat(CAT2);
+          const nextCount = counter + 1;
+          setCounter(nextCount);
+          jsonLocalStorage.setItem("counter", nextCount);   // 브라우저 새로고침 시, 이전의 데이터정보가 날라가게 되는데, 이를 방지하고자 localStorage 함수를 이용. >> 브라우저에 key-value 값을 Storage에 저장 가능함.
+        };
+
+        function handleHeartClick({}){
+          const nextFavorites = [...favorites, mainCat]  // 기존 favorites 배열에 CAT3 값을 추가함
+          setFavorites(nextFavorites);
+          jsonLocalStorage.setItem("favorites", nextFavorites);   // 브라우저를 새로 고침하더라도 기존 데이터 남아 있도록
+        };
+
+        return(
+        <div>  
+          <Title>{counter}번째 고양이 가라사대</Title>
+          <Form updateMainCat={updateMainCat} />
+          <MainCard img={mainCat} onHeartClick={handleHeartClick}/>
+          <Favorites favorites={favorites}/>
+        </div>
+      );
+      };
+
+      const 여기다가그려 = document.querySelector("#app");
+      ReactDOM.render(<App />, 여기다가그려); // catitem을 ReactDOM를 사용해서 여기다가그려에 그려라
+
+
+  
+    </script>
+  </body>
+</html>
+
+
+
+<!-- 
+  1. Javascript 문법을 리액트 안에서 사용하기
+     >> 중괄호{} 사용하기 
+  2. 컴포넌트 사용하기 
+     >> < /> 태그 사용하기 
+-->
+
+<!-- 
+* EE6+ 디스트럭처링 문법 적용 전
+
+  const MainCard = (props) => (
+    <img scr={props.img} />
+  }
+
+
+* EE6+ 디스트럭처링 문법 적용 후
+  const MainCard = ({img}) => (
+    <img scr={img} />
+  } 
+-->
+
