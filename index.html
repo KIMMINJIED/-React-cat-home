@@ -39,13 +39,28 @@
           return JSON.parse(localStorage.getItem(key));
         },
       };
+
+      // Open API로 고양이의 랜덤 사진을 받아오는 방법
+      const fetchCat = async (text) => {
+        const OPEN_API_DOMAIN = "https://cataas.com";   // Open API 주소
+        const response = await fetch(`${OPEN_API_DOMAIN}/cat/says/${text}?json=true`);    // 응답값을 받아와 response 변수에 담아주기 >> 응답값을 받아올때, json 형식으로 받아오도록
+        // https://joshua1988.github.io/web-development/javascript/js-async-await/#async--await는-뭔가요
+        const responseJson = await response.json();
+        return `${OPEN_API_DOMAIN}/cat/${responseJson._id}/says/${text}`; // NOTE: API 스펙 변경으로 강의 영상과 다른 URL로 변경했습니다.
+      };
+
       console.log("야옹");
 
-      const Title = (props) => {
-        return(
-          <h2>{props.children}</h2> // .children : 아래 "<Title>1번째 고양이 가라사대<Title/>"에서 받아온 인자값을 props가 어떻게 받아오는지 console.log(props)로 확인 했을때, .children라는 형태로 값을 받아오는 것을 확인.  >>  하여, {props.children}로 작성
-        )
-      }
+      const Title = ({counter}) => {
+        if(counter===null){   // counter는 숫자타입으로, '' 안먹고 null로 지정
+          return(
+            <h2>고양이 가라시대</h2>
+          // <h2>{props.children}</h2> // .children : 아래 "<Title>1번째 고양이 가라사대<Title/>"에서 받아온 인자값을 props가 어떻게 받아오는지 console.log(props)로 확인 했을때, .children라는 형태로 값을 받아오는 것을 확인.  >>  하여, {props.children}로 작성
+        ) 
+        } else{
+          return(<h2>{counter}번째 고양이 가라사대</h2>)
+        }
+      };
 
       const Form = ({updateMainCat}) => {
           // 한글이 포함되어 있으면 true를, 포함되지 않으면 false를 반환
@@ -70,7 +85,7 @@
               setErrorMessage("빈 값은 입력할 수 없습니다.");
               return; // 빈 값으로 제출할 경우, updateMainCat()함수가 작동하지 않도록(메인타이틀의 n번째 숫자가 바뀌지 않도록) return으로 해당 함수를 빠져나가도록 작성
             }
-            updateMainCat();
+            updateMainCat(value);
           }
         return (
           //기본적으로 폼 제출을 하면, 브라우저가 리프레시 됨
@@ -101,22 +116,25 @@
       }
 
       function Favorites({favorites}){
+        // 조건부 랜더링 >> favorites에 저장된 값이 없으면 문구 표시
+        if(favorites.length === 0){
+          return <div>사진 위 하트를 눌러 고양이 사진을 저장해보세요!</div>;
+        }
         return(
           // 리액트에서는 class라는 속성 대신 class-name이라는 속성을 사용한다. 표기법 : className. 예시 : (className="fav").
           <ul className="favorites">  
             {favorites.map((cat) => (
-              <CatItem img={cat} key={cat}/> //맵을 잘 활용하려면 키값을 지정해주는 것이 좋다. 보통 변수에 값을 지정할 때(CAT1 등) id값을 함께 지정함. 여기서는 url(cat)을 키이자 값으로 지정한 상태임
+              <CatItem img={cat} key={cat} /> //맵을 잘 활용하려면 키값을 지정해주는 것이 좋다. 보통 변수에 값을 지정할 때(CAT1 등) id값을 함께 지정함. 여기서는 url(cat)을 키이자 값으로 지정한 상태임
             ))}
           </ul>
-        )
-      };
+        );
+      }
 
       // 화살표 함수 : 함수를 정의하는 방법 중 하나
-      const MainCard = ({img, onHeartClick}) => {
-        // console.log(props);
+      const MainCard = ({img, onHeartClick, alreadyFavorite}) => {
         // onCilck으로 받아주는 이벤트핸들러명은 handle...Click으로 명명한다
         // onMouseOver으로 받아주는 이벤트핸들러명은 handle...MouseOver으로 명명한다
-
+        const heartIcon = alreadyFavorite ? "💖" : "🤍";
         return(
           <div className="main-card">
             <img
@@ -124,14 +142,15 @@
                alt="고양이"
                width="400"
             />
-            <button onClick={onHeartClick} >🤍</button> 
+            <button onClick={onHeartClick}>{heartIcon}</button> 
           </div>
-        )
+        );
       };
 
       // mainCard와 favorites를 모두 render하여 홈페이지에 보여주고 싶은데, 랜더는 하나만 할 수 있음.
       // 때문에, 변수를 따로 생성해 두 변수를 기술 
       // 부모 컴포넌트
+      // UI를 새로 그릴 때마다 app 컴포넌트 안에 있는 모든 코드들이 전부 다시 호출됨
       const App = () => {
         const CAT1 = "https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react";
         const CAT2 = "https://cataas.com/cat/BxqL2EjFmtxDkAm2/says/inflearn";
@@ -142,28 +161,54 @@
         const counter = counterState[0]; // 초기값이 저장된 공간
         const setCounter = counterState[1]; // 다음 카운터를 지정하기 위한 공간*/
         //const [counter, setCounter] = React.useState(Number(jsonLocalStorage.getItem('counter')));  // localStorage에 값을 저장하게 되면 기본적으로 String값으로 저장함. 이를 Number 타입으로 저장될 수 있도록 변환해줌
-        const [counter, setCounter] = React.useState(jsonLocalStorage.getItem("counter") || 0);  // 위에서 미리 정의한 jsonLocalStorage() 의 로털스토리지 형식을 사용
+        const [counter, setCounter] = React.useState(() => { 
+          return jsonLocalStorage.getItem("counter"); 
+        });  // 위에서 미리 정의한 jsonLocalStorage() 의 로털스토리지 형식을 사용
         const [mainCat, setmainCat] = React.useState(CAT1);
-        const [favorites, setFavorites] = React.useState(jsonLocalStorage.getItem("favorites") || []) ; // jsonLocalStorage.getItem("favorites")로 초기값을 지정. But, 값이 없으면 || 연산자 뒤에 있는 []배열(빈 배열)로 초기값 지정하라.
+        const [favorites, setFavorites] = React.useState(() => {  // LocalStorage에 접근 시, 부하 이슈가 발생. >> React.useState()안에 함수를 만들어 해결 가능 >> 앱이 실행될 때, 로컬 스토리지에 단 한번만 접근하게 한 후, 더이상 접근하지 않도록 만드는 것
+          return jsonLocalStorage.getItem("favorites") || []; 
+        }) ; // jsonLocalStorage.getItem("favorites")로 초기값을 지정. But, 값이 없으면 || 연산자 뒤에 있는 []배열(빈 배열)로 초기값 지정하라.
+        
+        const  alreadyFavorite = favorites.includes(mainCat);     // .includes() : favorites 목록에 포함 여부
 
-        function updateMainCat(){
-          setmainCat(CAT2);
-          const nextCount = counter + 1;
-          setCounter(nextCount);
-          jsonLocalStorage.setItem("counter", nextCount);   // 브라우저 새로고침 시, 이전의 데이터정보가 날라가게 되는데, 이를 방지하고자 localStorage 함수를 이용. >> 브라우저에 key-value 값을 Storage에 저장 가능함.
-        };
+        async function setInitialCat(){
+        const newCat = await fetchCat("First cat");
+        setmainCat(newCat);
+        }
+
+        // 단독으로 setInitialCat();만 호출하는 로직을 쓰면, app에서 UI가 그려질 때마다 작동하게 됨. >> ex. 폼을 제출할 때마다 firstCat 이미지가 생성됨
+        // 우리는 처음에 브러우저에 접속했을때, 첫 메인 사진만 셋팅하도록 할것임
+        // 때문에 setInitialCat()은 초기 1번만 실행시키고자 함
+        // 이때, 사용해야하는 것이 React.useEffect(). 이는 UI가 바뀔 때마다가 아닌, 원하는 특정 시점에서만 해당 함수를 호출하고 싶을때 사용.
+        // React.useEffect의 두번째 인자로 배열을 넘기고, 거기에 내가 원하는 상태를 넘겨주면 됨
+        // 맨 처음 앱이 생성되었을 때만 얘를 호출하고 싶다고 할때, 두번째 인자에 빈 배열을 넣어주면 된다
+        React.useEffect(() => {
+          setInitialCat();
+        }, []);
+
+        async function updateMainCat(value){
+          const newCat = await fetchCat(value);
+
+          setmainCat(newCat);
+
+          setCounter((prev) => {  // prev : previous의 약자. 기존 값. setcount값을 변경하기 전의 기존값을 첫 번째 인자로 불러올 수 있음.
+            const nextCount = counter + 1;
+            jsonLocalStorage.setItem("counter", nextCount);   // 브라우저 새로고침 시, 이전의 데이터정보가 날라가게 되는데, 이를 방지하고자 localStorage 함수를 이용. >> 브라우저에 key-value 값을 Storage에 저장 가능함.
+            return nextCount;
+          })
+       }
 
         function handleHeartClick({}){
           const nextFavorites = [...favorites, mainCat]  // 기존 favorites 배열에 CAT3 값을 추가함
           setFavorites(nextFavorites);
           jsonLocalStorage.setItem("favorites", nextFavorites);   // 브라우저를 새로 고침하더라도 기존 데이터 남아 있도록
-        };
+        }
 
         return(
         <div>  
-          <Title>{counter}번째 고양이 가라사대</Title>
+          <Title counter={counter} />
           <Form updateMainCat={updateMainCat} />
-          <MainCard img={mainCat} onHeartClick={handleHeartClick}/>
+          <MainCard img={mainCat} onHeartClick={handleHeartClick} alreadyFavorite={alreadyFavorite}/>
           <Favorites favorites={favorites}/>
         </div>
       );
